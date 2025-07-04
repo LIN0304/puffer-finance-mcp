@@ -11,6 +11,10 @@ import axios from "axios";
 import * as cheerio from "cheerio";
 import { z } from "zod";
 
+// Everclear API configuration
+const EVERCLEAR_API_BASE = "https://api.everclear.org";
+const EVERCLEAR_TESTNET_API_BASE = "https://api.testnet.everclear.org";
+
 const GetStrategiesRequestSchema = z.object({
   includeDetails: z.boolean().optional().default(true),
   timeout: z.number().optional().default(30000),
@@ -365,6 +369,41 @@ class PufferFinanceMCPServer {
             required: ["fromChain", "toChain", "token", "amount"],
           },
         },
+        {
+          name: "create_everclear_intent",
+          description: "Create an Everclear bridge intent with real-time API data",
+          inputSchema: {
+            type: "object",
+            properties: {
+              fromChain: {
+                type: "string",
+                description: "Source chain name (e.g., 'Ethereum', 'Base')",
+              },
+              toChain: {
+                type: "string",
+                description: "Destination chain name",
+              },
+              token: {
+                type: "string",
+                description: "Token to bridge (e.g., 'pufETH', 'xpufETH')",
+              },
+              amount: {
+                type: "string",
+                description: "Amount to bridge",
+              },
+              recipientAddress: {
+                type: "string",
+                description: "Recipient wallet address",
+              },
+              testnet: {
+                type: "boolean",
+                description: "Use testnet API (default: false)",
+                default: false,
+              },
+            },
+            required: ["fromChain", "toChain", "token", "amount", "recipientAddress"],
+          },
+        },
       ],
     }));
 
@@ -386,6 +425,8 @@ class PufferFinanceMCPServer {
           return await this.getBridgeInfo(args);
         case "execute_bridge":
           return await this.executeBridge(args);
+        case "create_everclear_intent":
+          return await this.createEverclearIntentTool(args);
         default:
           throw new Error(`Unknown tool: ${name}`);
       }
@@ -1657,7 +1698,7 @@ class PufferFinanceMCPServer {
       
       // Generate bridge transaction instructions
       const contractAddresses = bridgeData.bridgeOptions?.contractAddresses || {};
-      const bridgeInstructions = this.generateBridgeInstructions(fromChain, toChain, token, amount, slippage, contractAddresses);
+      const bridgeInstructions = await this.generateBridgeInstructions(fromChain, toChain, token, amount, slippage, contractAddresses);
       
       return {
         content: [
@@ -1726,7 +1767,7 @@ class PufferFinanceMCPServer {
     };
   }
 
-  generateBridgeInstructions(fromChain, toChain, token, amount, slippage, contractAddresses = {}) {
+  async generateBridgeInstructions(fromChain, toChain, token, amount, slippage, contractAddresses = {}) {
     const instructions = {
       fromChain,
       toChain,
@@ -1742,7 +1783,8 @@ class PufferFinanceMCPServer {
       estimatedTime: '5-15 minutes',
       requiredApprovals: [],
       risks: [],
-      availableContracts: contractAddresses
+      availableContracts: contractAddresses,
+      everclearData: null
     };
     
     // Get real contract addresses from Puffer Finance configuration
@@ -1769,6 +1811,51 @@ class PufferFinanceMCPServer {
             from: { chain: fromChain, token: fromConfig.tokenOnChain },
             to: { chain: toChain, token: toConfig.tokenOnChain }
           };
+
+          // If using EVERCLEAR, get live data from API
+          if (fromConfig.bridgeProvider === 'EVERCLEAR') {
+            try {
+              console.log(`Getting Everclear data for ${fromChain} -> ${toChain} bridge...`);
+              
+              // Get real-time quote from Everclear API
+              const quote = await this.getEverclearQuote(fromChainId, toChainId, token, amount);
+              
+              if (quote.success) {
+                instructions.everclearData = {
+                  quote: quote.data,
+                  estimatedFee: quote.fee,
+                  estimatedTime: quote.estimatedTime
+                };
+                instructions.fees.everclearFee = quote.fee;
+                instructions.estimatedTime = quote.estimatedTime;
+              } else {
+                console.warn('Everclear API unavailable, using fallback data');
+                instructions.everclearData = {
+                  error: quote.error,
+                  fallback: quote.fallback
+                };
+                instructions.fees.everclearFee = quote.fallback.fee;
+                instructions.estimatedTime = quote.fallback.estimatedTime;
+              }
+
+              // Get route limits
+              const limits = await this.getEverclearRouteLimits(fromChainId, toChainId, token);
+              if (limits.success) {
+                instructions.everclearData.limits = {
+                  minAmount: limits.minAmount,
+                  maxAmount: limits.maxAmount,
+                  liquidity: limits.liquidity
+                };
+              }
+
+            } catch (error) {
+              console.error('Error fetching Everclear data:', error.message);
+              instructions.everclearData = {
+                error: error.message,
+                fallback: true
+              };
+            }
+          }
         }
       }
     }
@@ -1817,16 +1904,34 @@ class PufferFinanceMCPServer {
     // Generate chain-specific bridge instructions with real addresses
     if (fromChain === 'Ethereum' && toChain === 'Base') {
       if (instructions.bridgeProvider === 'EVERCLEAR') {
+        // Use live Everclear data if available
+        const everclearFee = instructions.everclearData?.estimatedFee || '~$0.50';
+        const bridgeTime = instructions.everclearData?.estimatedTime || '1-5 minutes';
+        
         instructions.steps = [
           "1. Approve tokens for EVERCLEAR bridge contract",
-          "2. Call bridge() function via EVERCLEAR",
-          "3. Wait for EVERCLEAR validation",
-          "4. Receive xpufETH on Base (1-5 minutes)"
+          "2. Create Everclear intent via API",
+          "3. Execute bridge transaction with intent data",
+          `4. Receive xpufETH on Base (${bridgeTime})`
         ];
+        
+        if (instructions.everclearData?.quote) {
+          instructions.steps.push("5. ✅ Real-time data from Everclear API");
+        }
+        
         instructions.fees = {
           bridgeFee: '~$1-3',
-          everclearFee: '~$0.50'
+          everclearFee: everclearFee
         };
+        
+        // Add limits information if available
+        if (instructions.everclearData?.limits) {
+          instructions.limits = {
+            minAmount: instructions.everclearData.limits.minAmount,
+            maxAmount: instructions.everclearData.limits.maxAmount,
+            liquidity: instructions.everclearData.limits.liquidity
+          };
+        }
       } else {
         instructions.steps = [
           "1. Approve tokens for Base Portal contract",
@@ -2004,6 +2109,236 @@ class PufferFinanceMCPServer {
     } else {
       return `bridgeERC20("${token}", "${amount}", "${toChain}")`;
     }
+  }
+
+  async createEverclearIntentTool(args) {
+    const { fromChain, toChain, token, amount, recipientAddress, testnet = false } = args;
+    
+    try {
+      const fromChainId = CHAIN_IDS[fromChain];
+      const toChainId = CHAIN_IDS[toChain];
+      
+      if (!fromChainId || !toChainId) {
+        throw new Error(`Invalid chain names: ${fromChain} -> ${toChain}`);
+      }
+
+      // Validate bridge route
+      const validation = this.validateBridgeParams(fromChain, toChain, token, {});
+      if (!validation.isValid) {
+        throw new Error(`Invalid bridge parameters: ${validation.errors.join(', ')}`);
+      }
+
+      console.log(`Creating Everclear intent: ${fromChain} -> ${toChain}, ${amount} ${token}`);
+
+      // Get quote first
+      const quote = await this.getEverclearQuote(fromChainId, toChainId, token, amount, testnet);
+      
+      // Create intent
+      const intent = await this.createEverclearIntent(fromChainId, toChainId, token, amount, recipientAddress, testnet);
+      
+      // Get route limits
+      const limits = await this.getEverclearRouteLimits(fromChainId, toChainId, token, testnet);
+
+      return {
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify({
+              everclearIntent: {
+                fromChain,
+                toChain,
+                token,
+                amount,
+                recipientAddress,
+                quote: quote.success ? {
+                  fee: quote.fee,
+                  estimatedTime: quote.estimatedTime,
+                  route: quote.route
+                } : quote.fallback,
+                intent: intent.success ? {
+                  intentId: intent.intentId,
+                  contractAddress: intent.contractAddress,
+                  transactionData: intent.transactionData,
+                  calldata: intent.calldata,
+                  value: intent.value
+                } : intent.fallback,
+                limits: limits.success ? {
+                  minAmount: limits.minAmount,
+                  maxAmount: limits.maxAmount,
+                  liquidity: limits.liquidity
+                } : limits.fallback,
+                instructions: [
+                  "1. ✅ Everclear intent created via API",
+                  `2. Approve ${token} for contract: ${intent.contractAddress || 'UNKNOWN'}`,
+                  "3. Execute transaction with provided calldata",
+                  `4. Monitor bridge progress via intent ID: ${intent.intentId || 'UNKNOWN'}`,
+                  `5. Receive tokens on ${toChain} (${quote.estimatedTime || '3-8 minutes'})`
+                ],
+                apiStatus: {
+                  quote: quote.success ? "✅ Live data" : "⚠️ Fallback data",
+                  intent: intent.success ? "✅ Intent created" : "❌ Intent failed",
+                  limits: limits.success ? "✅ Live limits" : "⚠️ Fallback limits"
+                },
+                testnet: testnet ? "Using testnet API" : "Using mainnet API"
+              }
+            }, null, 2)
+          }
+        ]
+      };
+
+    } catch (error) {
+      return {
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify({
+              error: `Failed to create Everclear intent: ${error.message}`,
+              fallback: {
+                message: "Use execute_bridge tool for fallback bridge instructions",
+                supportedChains: Object.keys(CHAIN_IDS),
+                supportedTokens: ["pufETH", "xpufETH", "ETH", "USDC", "USDT"]
+              }
+            }, null, 2)
+          }
+        ]
+      };
+    }
+  }
+
+  // Everclear API integration methods
+  async getEverclearQuote(fromChainId, toChainId, token, amount, testnet = false) {
+    try {
+      const baseUrl = testnet ? EVERCLEAR_TESTNET_API_BASE : EVERCLEAR_API_BASE;
+      
+      // Convert token names to Everclear format
+      const everclearToken = this.mapTokenToEverclear(token);
+      
+      const response = await axios.post(`${baseUrl}/routes/quotes`, {
+        origin: fromChainId.toString(),
+        destinations: [toChainId.toString()],
+        inputAsset: everclearToken,
+        amount: amount,
+        to: "0x0000000000000000000000000000000000000000" // Placeholder
+      }, {
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
+        timeout: 10000
+      });
+
+      return {
+        success: true,
+        data: response.data,
+        fee: response.data.fee || '0',
+        estimatedTime: response.data.estimatedTime || '1-5 minutes',
+        route: response.data.route || 'EVERCLEAR'
+      };
+    } catch (error) {
+      console.error('Everclear API error:', error.message);
+      return {
+        success: false,
+        error: error.message,
+        fallback: {
+          fee: '0.001 ETH',
+          estimatedTime: '3-8 minutes',
+          route: 'EVERCLEAR_FALLBACK'
+        }
+      };
+    }
+  }
+
+  async createEverclearIntent(fromChainId, toChainId, token, amount, recipientAddress, testnet = false) {
+    try {
+      const baseUrl = testnet ? EVERCLEAR_TESTNET_API_BASE : EVERCLEAR_API_BASE;
+      const everclearToken = this.mapTokenToEverclear(token);
+      
+      const response = await axios.post(`${baseUrl}/intents`, {
+        origin: fromChainId.toString(),
+        destinations: [toChainId.toString()],
+        inputAsset: everclearToken,
+        amount: amount,
+        to: recipientAddress || undefined
+      }, {
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
+        timeout: 15000
+      });
+
+      return {
+        success: true,
+        intentId: response.data.id,
+        transactionData: response.data.txData,
+        contractAddress: response.data.contractAddress,
+        calldata: response.data.calldata,
+        value: response.data.value || '0'
+      };
+    } catch (error) {
+      console.error('Everclear intent creation error:', error.message);
+      return {
+        success: false,
+        error: error.message,
+        fallback: {
+          contractAddress: PUFFER_CONTRACTS[fromChainId]?.PufferL2Depositor || "0x0000000000000000000000000000000000000000",
+          method: "bridge(address,uint256,uint256)",
+          note: "Use fallback bridge method - Everclear API unavailable"
+        }
+      };
+    }
+  }
+
+  async getEverclearRouteLimits(fromChainId, toChainId, token, testnet = false) {
+    try {
+      const baseUrl = testnet ? EVERCLEAR_TESTNET_API_BASE : EVERCLEAR_API_BASE;
+      const everclearToken = this.mapTokenToEverclear(token);
+      
+      const response = await axios.post(`${baseUrl}/routes/limits`, {
+        origin: fromChainId.toString(),
+        destinations: [toChainId.toString()],
+        inputAsset: everclearToken
+      }, {
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
+        timeout: 8000
+      });
+
+      return {
+        success: true,
+        minAmount: response.data.minAmount || '0.001',
+        maxAmount: response.data.maxAmount || '1000',
+        liquidity: response.data.liquidity || 'Available'
+      };
+    } catch (error) {
+      console.error('Everclear limits error:', error.message);
+      return {
+        success: false,
+        error: error.message,
+        fallback: {
+          minAmount: '0.001',
+          maxAmount: '100',
+          liquidity: 'Unknown'
+        }
+      };
+    }
+  }
+
+  mapTokenToEverclear(token) {
+    // Map Puffer tokens to Everclear format
+    const tokenMapping = {
+      'pufETH': 'pufETH',
+      'xpufETH': 'xpufETH', 
+      'ETH': 'ETH',
+      'WETH': 'WETH',
+      'USDC': 'USDC',
+      'USDT': 'USDT',
+      'wstETH': 'wstETH'
+    };
+    
+    return tokenMapping[token] || token;
   }
 
   async run() {

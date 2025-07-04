@@ -7,6 +7,7 @@ Complete MCP server for Puffer Finance with **DeFi strategies**, **cross-chain b
 ### 🌉 **Cross-Chain Bridge Operations**
 - **8 Supported Networks**: Ethereum, Base, Arbitrum, Apechain, BNB Chain, Berachain, Soneium, Zircuit
 - **Bridge Provider Integration**: EVERCLEAR + CHAINLINK CCIP
+- **Live Everclear API**: Real-time quotes, intents, and limits from api.everclear.org
 - **Real Contract Addresses**: All verified Puffer Finance contracts
 - **Token Mapping**: Automatic pufETH ↔ xpufETH conversion
 - **Provider-Specific Instructions**: Optimized routes and fees
@@ -51,7 +52,7 @@ Add to your Claude desktop config:
 npm start
 ```
 
-## 🛠️ Available Tools
+## 🛠️ Available Tools (8 Total)
 
 ### 1. **`get_bridge_info`** 🌉
 Comprehensive bridge information extraction
@@ -68,32 +69,40 @@ Execute cross-chain bridge transactions
 - **Fee Optimization**: Provider-specific cost analysis
 - **Time Estimates**: Accurate transfer durations
 
-### 3. **`get_defi_strategies`**
+### 2b. **`create_everclear_intent`** 🚀 **NEW**
+Direct Everclear API integration for real-time bridge execution
+- **Live API Data**: Real-time quotes, fees, and timing from Everclear API
+- **Intent Creation**: Generates executable bridge intents with calldata
+- **Route Limits**: Live minimum/maximum amounts and liquidity status
+- **Transaction Ready**: Returns contract addresses and execution data
+- **Fallback Support**: Graceful degradation if API unavailable
+
+### 4. **`get_defi_strategies`**
 Scrape all DeFi opportunities from Puffer Finance
 - **30+ Strategies**: Complete ecosystem coverage
 - **Live Data**: Real-time APR, TVL, rewards
 - **Protocol Detection**: Curve, Unifi, Euler, Uniswap, etc.
 
-### 4. **`deposit_to_strategy`**
+### 5. **`deposit_to_strategy`**
 Generate protocol-specific deposit instructions
 - **Smart Contracts**: Real Puffer Finance addresses
 - **Transaction Data**: Ready-to-execute calls
 - **Gas Estimates**: Accurate cost predictions
 - **Approvals**: Required token approvals
 
-### 5. **`get_strategy_details`**
+### 6. **`get_strategy_details`**
 Detailed strategy analysis
 - **Comprehensive Info**: Fees, risks, lockups
 - **Contract Addresses**: Verified protocol contracts
 - **Requirements**: Minimum deposits, token types
 
-### 6. **`simulate_deposit`**
+### 7. **`simulate_deposit`**
 Calculate projected returns and costs
 - **Yield Projections**: Daily/weekly/monthly/yearly
 - **Fee Impact**: Real cost calculations
 - **Risk Assessment**: Strategy-specific warnings
 
-### 7. **`get_vaults`**
+### 8. **`get_vaults`**
 Vault information from Puffer Finance
 - **Vault Metrics**: APY, TVL, token support
 - **Real-time Data**: Live vault performance
@@ -124,6 +133,15 @@ execute_bridge({
   "toChain": "Base", 
   "token": "pufETH",
   "amount": "1.0"
+})
+
+// Create Everclear intent with live API data
+create_everclear_intent({
+  "fromChain": "Ethereum",
+  "toChain": "Base",
+  "token": "pufETH",
+  "amount": "1.0",
+  "recipientAddress": "0x742d35cc6cd34b0532c4c0e4b8f0c7c7e1234567"
 })
 
 // Bridge via CHAINLINK to Arbitrum
