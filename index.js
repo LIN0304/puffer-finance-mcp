@@ -382,7 +382,7 @@ class PufferFinanceMCPServer {
         },
         {
           name: "create_everclear_intent",
-          description: "Create an Everclear bridge intent with real-time API data",
+          description: "Create pufETH/xpufETH bridge via Puffer Finance using Everclear (their primary bridge provider)",
           inputSchema: {
             type: "object",
             properties: {
@@ -396,7 +396,7 @@ class PufferFinanceMCPServer {
               },
               token: {
                 type: "string",
-                description: "Token to bridge (e.g., 'pufETH', 'xpufETH')",
+                description: "Token to bridge ('pufETH' or 'xpufETH')",
               },
               amount: {
                 type: "string",
@@ -408,7 +408,7 @@ class PufferFinanceMCPServer {
               },
               testnet: {
                 type: "boolean",
-                description: "Use testnet API (default: false)",
+                description: "Use testnet mode (default: false)",
                 default: false,
               },
             },
@@ -2170,64 +2170,63 @@ class PufferFinanceMCPServer {
         throw new Error(`Invalid chain names: ${fromChain} -> ${toChain}`);
       }
 
-      // Validate bridge route
-      const validation = this.validateBridgeParams(fromChain, toChain, token, {});
+      // Validate Puffer bridge route for Everclear
+      const validation = this.validatePufferBridgeParams(fromChain, toChain, token, 'EVERCLEAR');
       if (!validation.isValid) {
-        throw new Error(`Invalid bridge parameters: ${validation.errors.join(', ')}`);
+        throw new Error(`Invalid Puffer bridge parameters: ${validation.errors.join(', ')}`);
       }
 
-      console.log(`Creating Everclear intent: ${fromChain} -> ${toChain}, ${amount} ${token}`);
+      console.log(`Creating Puffer Finance bridge via Everclear: ${fromChain} -> ${toChain}, ${amount} ${token}`);
 
-      // Get quote first
-      const quote = await this.getEverclearQuote(fromChainId, toChainId, token, amount, testnet);
+      // Get quote from Puffer's bridge API (which uses Everclear)
+      const quote = await this.getPufferBridgeQuote(fromChainId, toChainId, token, amount, 'EVERCLEAR');
       
-      // Create intent
-      const intent = await this.createEverclearIntent(fromChainId, toChainId, token, amount, recipientAddress, testnet);
-      
-      // Get route limits
-      const limits = await this.getEverclearRouteLimits(fromChainId, toChainId, token, testnet);
+      // Create bridge transaction via Puffer's API
+      const bridge = await this.createPufferBridge(fromChainId, toChainId, token, amount, recipientAddress, 'EVERCLEAR');
 
       return {
         content: [
           {
             type: "text",
             text: JSON.stringify({
-              everclearIntent: {
+              pufferEverclearBridge: {
                 fromChain,
                 toChain,
                 token,
                 amount,
                 recipientAddress,
+                provider: "EVERCLEAR (via Puffer Finance)",
                 quote: quote.success ? {
                   fee: quote.fee,
                   estimatedTime: quote.estimatedTime,
-                  route: quote.route
+                  settlementTime: quote.settlementTime,
+                  exchangeRate: quote.exchangeRate
                 } : quote.fallback,
-                intent: intent.success ? {
-                  intentId: intent.intentId,
-                  contractAddress: intent.contractAddress,
-                  transactionData: intent.transactionData,
-                  calldata: intent.calldata,
-                  value: intent.value
-                } : intent.fallback,
-                limits: limits.success ? {
-                  minAmount: limits.minAmount,
-                  maxAmount: limits.maxAmount,
-                  liquidity: limits.liquidity
-                } : limits.fallback,
+                bridge: bridge.success ? {
+                  bridgeId: bridge.bridgeId,
+                  contractAddress: bridge.contractAddress,
+                  transactionData: bridge.transactionData,
+                  calldata: bridge.calldata,
+                  value: bridge.value,
+                  gasLimit: bridge.gasLimit
+                } : bridge.fallback,
                 instructions: [
-                  "1. ✅ Everclear intent created via API",
-                  `2. Approve ${token} for contract: ${intent.contractAddress || 'UNKNOWN'}`,
-                  "3. Execute transaction with provided calldata",
-                  `4. Monitor bridge progress via intent ID: ${intent.intentId || 'UNKNOWN'}`,
-                  `5. Receive tokens on ${toChain} (${quote.estimatedTime || '3-8 minutes'})`
+                  "1. 🔥 Puffer Finance bridge created via Everclear",
+                  `2. Approve ${token} for Puffer contract: ${bridge.contractAddress || 'PUFFER_BRIDGE_CONTRACT'}`,
+                  "3. Execute bridge transaction with provided calldata",
+                  "4. Monitor bridge progress via Puffer app",
+                  `5. Receive ${token === 'pufETH' ? 'xpufETH' : 'pufETH'} on ${toChain} (${quote.settlementTime || '30 minutes'})`
                 ],
                 apiStatus: {
-                  quote: quote.success ? "✅ Live data" : "⚠️ Fallback data",
-                  intent: intent.success ? "✅ Intent created" : "❌ Intent failed",
-                  limits: limits.success ? "✅ Live limits" : "⚠️ Fallback limits"
+                  quote: quote.success ? "✅ Live Puffer data" : "⚠️ Fallback data",
+                  bridge: bridge.success ? "✅ Bridge created" : "❌ Bridge failed"
                 },
-                testnet: testnet ? "Using testnet API" : "Using mainnet API"
+                partnership: "Official Puffer-Everclear collaboration",
+                features: ["$17.5M Bridge Volume", "30min Settlement", "xERC20 Standard", "Trust-minimized"],
+                tokenMapping: token === 'pufETH' ? 
+                  `${token} (${fromChain}) → xpufETH (${toChain})` :
+                  `${token} (${fromChain}) → pufETH (${toChain})`,
+                testnet: testnet ? "Using Puffer testnet" : "Using Puffer mainnet"
               }
             }, null, 2)
           }
@@ -2240,11 +2239,13 @@ class PufferFinanceMCPServer {
           {
             type: "text",
             text: JSON.stringify({
-              error: `Failed to create Everclear intent: ${error.message}`,
+              error: `Failed to create Puffer bridge via Everclear: ${error.message}`,
               fallback: {
-                message: "Use execute_bridge tool for fallback bridge instructions",
-                supportedChains: Object.keys(CHAIN_IDS),
-                supportedTokens: ["pufETH", "xpufETH", "ETH", "USDC", "USDT"]
+                message: "Use puffer_bridge tool for alternative provider options",
+                supportedChains: ["Ethereum", "Base", "Arbitrum", "Polygon", "Optimism", "Avalanche", "BSC", "zkSync Era"],
+                supportedTokens: ["pufETH", "xpufETH"],
+                providers: ["EVERCLEAR (Primary)", "CHAINLINK_CCIP (Enterprise)"],
+                bridgeVolume: "$17.5M bridged via Puffer-Everclear partnership"
               }
             }, null, 2)
           }

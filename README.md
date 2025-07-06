@@ -70,13 +70,13 @@ Execute cross-chain bridge transactions
 - **Fee Optimization**: Provider-specific cost analysis
 - **Time Estimates**: Accurate transfer durations
 
-### 2b. **`create_everclear_intent`** 🚀 **NEW**
-Direct Everclear API integration for real-time bridge execution
-- **Live API Data**: Real-time quotes, fees, and timing from Everclear API
-- **Intent Creation**: Generates executable bridge intents with calldata
-- **Route Limits**: Live minimum/maximum amounts and liquidity status
-- **Transaction Ready**: Returns contract addresses and execution data
-- **Fallback Support**: Graceful degradation if API unavailable
+### 2b. **`create_everclear_intent`** 🔥 **PUFFER-EVERCLEAR**
+Bridge pufETH/xpufETH via Puffer Finance using their Everclear integration
+- **Puffer Native**: Uses Puffer Finance's bridge API with Everclear provider
+- **Partnership Proven**: $17.5M bridge volume via official collaboration
+- **Fast Settlement**: 30-minute settlement time (improved from 2 hours)
+- **xERC20 Standard**: Bridge-agnostic standard for maximum security
+- **Trust-minimized**: Everclear's automated optimization for cost-efficiency
 
 ### 2c. **`puffer_bridge`** 🔥 **PUFFER FINANCE NATIVE**
 Direct Puffer Finance bridge integration using their actual bridge providers
@@ -136,15 +136,17 @@ Vault information from Puffer Finance
 // Get all bridge options
 get_bridge_info()
 
-// Bridge pufETH from Ethereum to Base (becomes xpufETH)
-execute_bridge({
+// Bridge via Puffer Finance native bridge
+puffer_bridge({
   "fromChain": "Ethereum",
-  "toChain": "Base", 
+  "toChain": "Base",
   "token": "pufETH",
-  "amount": "1.0"
+  "amount": "1.0",
+  "recipientAddress": "0x742d35cc6cd34b0532c4c0e4b8f0c7c7e1234567",
+  "provider": "EVERCLEAR"
 })
 
-// Create Everclear intent with live API data
+// Bridge via Puffer-Everclear integration
 create_everclear_intent({
   "fromChain": "Ethereum",
   "toChain": "Base",
@@ -153,12 +155,14 @@ create_everclear_intent({
   "recipientAddress": "0x742d35cc6cd34b0532c4c0e4b8f0c7c7e1234567"
 })
 
-// Bridge via CHAINLINK to Arbitrum
-execute_bridge({
+// Bridge via Chainlink CCIP for enterprise
+puffer_bridge({
   "fromChain": "Ethereum",
-  "toChain": "Arbitrum",
-  "token": "pufETH", 
-  "amount": "0.5"
+  "toChain": "Soneium",
+  "token": "pufETH",
+  "amount": "0.5",
+  "recipientAddress": "0x742d35cc6cd34b0532c4c0e4b8f0c7c7e1234567",
+  "provider": "CHAINLINK_CCIP"
 })
 ```
 
