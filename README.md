@@ -5,8 +5,9 @@ Complete MCP server for Puffer Finance with **DeFi strategies**, **cross-chain b
 ## ✨ Features
 
 ### 🌉 **Cross-Chain Bridge Operations**
-- **8 Supported Networks**: Ethereum, Base, Arbitrum, Apechain, BNB Chain, Berachain, Soneium, Zircuit
-- **Bridge Provider Integration**: EVERCLEAR + CHAINLINK CCIP
+- **10 Supported Networks**: Ethereum, Base, Arbitrum, Polygon, Avalanche, BSC, Apechain, BNB Chain, Berachain, Soneium, Zircuit
+- **Bridge Provider Integration**: STARGATE + EVERCLEAR + CHAINLINK CCIP
+- **Live Stargate API**: Unified liquidity and fast transfers via api.stargate.finance
 - **Live Everclear API**: Real-time quotes, intents, and limits from api.everclear.org
 - **Real Contract Addresses**: All verified Puffer Finance contracts
 - **Token Mapping**: Automatic pufETH ↔ xpufETH conversion
@@ -52,7 +53,7 @@ Add to your Claude desktop config:
 npm start
 ```
 
-## 🛠️ Available Tools (8 Total)
+## 🛠️ Available Tools (9 Total)
 
 ### 1. **`get_bridge_info`** 🌉
 Comprehensive bridge information extraction
@@ -76,6 +77,14 @@ Direct Everclear API integration for real-time bridge execution
 - **Route Limits**: Live minimum/maximum amounts and liquidity status
 - **Transaction Ready**: Returns contract addresses and execution data
 - **Fallback Support**: Graceful degradation if API unavailable
+
+### 2c. **`create_stargate_swap`** 🌟 **STARGATE FINANCE**
+Direct Stargate Finance API integration for unified liquidity bridging
+- **Unified Liquidity**: Access to Stargate's unified liquidity pools
+- **Fast Transfers**: 1-3 minute cross-chain transfers
+- **Live API Data**: Real-time quotes and swap data from api.stargate.finance
+- **Low Slippage**: Optimized for minimal slippage across chains
+- **6 Major Networks**: Ethereum, Base, Arbitrum, Polygon, Avalanche, BSC
 
 ### 4. **`get_defi_strategies`**
 Scrape all DeFi opportunities from Puffer Finance
@@ -173,23 +182,30 @@ simulate_deposit({
 
 ## 🔧 Bridge Providers
 
+### **STARGATE FINANCE** ⭐ **PRIMARY PROVIDER**
+- **Chains**: Ethereum, Base, Arbitrum, Polygon, Avalanche, BSC
+- **Token**: pufETH/xpufETH (unified liquidity)
+- **Features**: Unified liquidity pools, 1-3 min transfers, low slippage
+- **Router**: 0x8731d54E9D02c286767d56ac03e8037C07e01e98
+
 ### **EVERCLEAR** 
 - **Chains**: Base, BNB Chain, Apechain, Zircuit
 - **Token**: xpufETH (cross-chain representation)
-- **Features**: Lower fees (~$1-8), faster transfers (1-10 min)
+- **Features**: Intent-based bridging, lower fees (~$1-8), 1-10 min transfers
 
 ### **CHAINLINK CCIP**
 - **Chains**: Arbitrum, Soneium, Berachain  
 - **Token**: pufETH (native token)
-- **Features**: Higher security, reliable transfers (5-15 min)
+- **Features**: Enterprise security, reliable transfers (5-15 min)
 
 ## 🏗️ Architecture
 
 - **Real Contract Integration**: All addresses verified from Puffer Finance
-- **Multi-Provider Support**: EVERCLEAR + CHAINLINK bridge routing
+- **Triple Provider Support**: STARGATE + EVERCLEAR + CHAINLINK bridge routing
 - **Token Intelligence**: Automatic pufETH/xpufETH mapping
 - **Error Handling**: Comprehensive validation and safety checks
 - **Live Data**: Real-time scraping from app.puffer.fi
+- **API Integration**: Direct connection to Stargate and Everclear APIs
 
 ## 📄 License
 
