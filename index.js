@@ -12,10 +12,10 @@ import * as cheerio from "cheerio";
 import { z } from "zod";
 
 // Bridge API configurations
+const PUFFER_API_BASE = "https://app.puffer.fi/api";
 const EVERCLEAR_API_BASE = "https://api.everclear.org";
 const EVERCLEAR_TESTNET_API_BASE = "https://api.testnet.everclear.org";
-const STARGATE_API_BASE = "https://api.stargate.finance";
-const STARGATE_TESTNET_API_BASE = "https://api-testnet.stargate.finance";
+const CHAINLINK_CCIP_API_BASE = "https://ccip.chain.link/v1";
 
 const GetStrategiesRequestSchema = z.object({
   includeDetails: z.boolean().optional().default(true),
@@ -158,48 +158,37 @@ const TOKEN_ADDRESSES = {
   }
 };
 
-// Bridge provider configuration for pufETH/xpufETH - STARGATE + EVERCLEAR + CHAINLINK
+// Puffer Finance bridge provider configuration - EVERCLEAR + CHAINLINK CCIP (Real providers used by Puffer)
 const BRIDGE_PROVIDERS = {
   pufETH: {
     supportedChains: [
-      // STARGATE Finance routes (Primary provider as mentioned by user)
-      { chain: 1, tokenOnChain: 'pufETH', bridgeProvider: 'STARGATE', features: ['fast', 'unified_liquidity'] },
-      { chain: 8453, tokenOnChain: 'xpufETH', bridgeProvider: 'STARGATE', features: ['fast', 'unified_liquidity'] },
-      { chain: 42161, tokenOnChain: 'pufETH', bridgeProvider: 'STARGATE', features: ['fast', 'unified_liquidity'] },
-      { chain: 56, tokenOnChain: 'xpufETH', bridgeProvider: 'STARGATE', features: ['fast', 'unified_liquidity'] },
-      { chain: 43114, tokenOnChain: 'pufETH', bridgeProvider: 'STARGATE', features: ['fast', 'unified_liquidity'] }, // Avalanche
-      { chain: 137, tokenOnChain: 'pufETH', bridgeProvider: 'STARGATE', features: ['fast', 'unified_liquidity'] }, // Polygon
+      // EVERCLEAR routes (Primary provider used by Puffer Finance)
+      { chain: 1, tokenOnChain: 'pufETH', bridgeProvider: 'EVERCLEAR', features: ['puffer_native', 'fast_settlement', 'xERC20_standard'], settlementTime: '30min' },
+      { chain: 8453, tokenOnChain: 'xpufETH', bridgeProvider: 'EVERCLEAR', features: ['puffer_native', 'fast_settlement', 'xERC20_standard'], settlementTime: '30min' },
+      { chain: 42161, tokenOnChain: 'xpufETH', bridgeProvider: 'EVERCLEAR', features: ['puffer_native', 'fast_settlement', 'xERC20_standard'], settlementTime: '30min' },
+      { chain: 137, tokenOnChain: 'xpufETH', bridgeProvider: 'EVERCLEAR', features: ['puffer_native', 'fast_settlement', 'xERC20_standard'], settlementTime: '30min' },
+      { chain: 43114, tokenOnChain: 'xpufETH', bridgeProvider: 'EVERCLEAR', features: ['puffer_native', 'fast_settlement', 'xERC20_standard'], settlementTime: '30min' },
+      { chain: 56, tokenOnChain: 'xpufETH', bridgeProvider: 'EVERCLEAR', features: ['puffer_native', 'fast_settlement', 'xERC20_standard'], settlementTime: '30min' },
+      { chain: 10, tokenOnChain: 'xpufETH', bridgeProvider: 'EVERCLEAR', features: ['puffer_native', 'fast_settlement', 'xERC20_standard'], settlementTime: '30min' }, // Optimism
+      { chain: 324, tokenOnChain: 'xpufETH', bridgeProvider: 'EVERCLEAR', features: ['puffer_native', 'fast_settlement', 'xERC20_standard'], settlementTime: '30min' }, // zkSync Era
       
-      // EVERCLEAR routes (Secondary provider)
-      { chain: 1, tokenOnChain: 'pufETH', bridgeProvider: 'EVERCLEAR', features: ['intent_based', 'low_cost'] },
-      { chain: 8453, tokenOnChain: 'xpufETH', bridgeProvider: 'EVERCLEAR', features: ['intent_based', 'low_cost'] },
-      { chain: 56, tokenOnChain: 'xpufETH', bridgeProvider: 'EVERCLEAR', features: ['intent_based', 'low_cost'] },
-      { chain: 33139, tokenOnChain: 'xpufETH', bridgeProvider: 'EVERCLEAR', features: ['intent_based', 'low_cost'] },
-      { chain: 48900, tokenOnChain: 'xpufETH', bridgeProvider: 'EVERCLEAR', features: ['intent_based', 'low_cost'] },
-      
-      // CHAINLINK CCIP routes (Enterprise grade)
-      { chain: 1, tokenOnChain: 'pufETH', bridgeProvider: 'CHAINLINK', features: ['secure', 'enterprise'] },
-      { chain: 1868, tokenOnChain: 'pufETH', bridgeProvider: 'CHAINLINK', features: ['secure', 'enterprise'] },
-      { chain: 42161, tokenOnChain: 'pufETH', bridgeProvider: 'CHAINLINK', features: ['secure', 'enterprise'] },
-      { chain: 80094, tokenOnChain: 'pufETH', bridgeProvider: 'CHAINLINK', features: ['secure', 'enterprise'] }
+      // CHAINLINK CCIP routes (Secondary provider for specific chains)
+      { chain: 1, tokenOnChain: 'pufETH', bridgeProvider: 'CHAINLINK_CCIP', features: ['enterprise_security', 'verifiable_cross_chain'], settlementTime: '5-15min' },
+      { chain: 1868, tokenOnChain: 'pufETH', bridgeProvider: 'CHAINLINK_CCIP', features: ['enterprise_security', 'verifiable_cross_chain'], settlementTime: '5-15min' }, // Soneium
+      { chain: 80094, tokenOnChain: 'pufETH', bridgeProvider: 'CHAINLINK_CCIP', features: ['enterprise_security', 'verifiable_cross_chain'], settlementTime: '5-15min' } // Berachain
     ]
   },
   xpufETH: {
     supportedChains: [
-      // STARGATE Finance routes (Primary provider)
-      { chain: 1, tokenOnChain: 'pufETH', bridgeProvider: 'STARGATE', features: ['fast', 'unified_liquidity'] },
-      { chain: 8453, tokenOnChain: 'xpufETH', bridgeProvider: 'STARGATE', features: ['fast', 'unified_liquidity'] },
-      { chain: 42161, tokenOnChain: 'pufETH', bridgeProvider: 'STARGATE', features: ['fast', 'unified_liquidity'] },
-      { chain: 56, tokenOnChain: 'xpufETH', bridgeProvider: 'STARGATE', features: ['fast', 'unified_liquidity'] },
-      { chain: 43114, tokenOnChain: 'pufETH', bridgeProvider: 'STARGATE', features: ['fast', 'unified_liquidity'] },
-      { chain: 137, tokenOnChain: 'pufETH', bridgeProvider: 'STARGATE', features: ['fast', 'unified_liquidity'] },
-      
-      // EVERCLEAR routes (Secondary provider)
-      { chain: 1, tokenOnChain: 'pufETH', bridgeProvider: 'EVERCLEAR', features: ['intent_based', 'low_cost'] },
-      { chain: 8453, tokenOnChain: 'xpufETH', bridgeProvider: 'EVERCLEAR', features: ['intent_based', 'low_cost'] },
-      { chain: 56, tokenOnChain: 'xpufETH', bridgeProvider: 'EVERCLEAR', features: ['intent_based', 'low_cost'] },
-      { chain: 33139, tokenOnChain: 'xpufETH', bridgeProvider: 'EVERCLEAR', features: ['intent_based', 'low_cost'] },
-      { chain: 48900, tokenOnChain: 'xpufETH', bridgeProvider: 'EVERCLEAR', features: ['intent_based', 'low_cost'] }
+      // EVERCLEAR routes (Primary provider used by Puffer Finance)
+      { chain: 1, tokenOnChain: 'pufETH', bridgeProvider: 'EVERCLEAR', features: ['puffer_native', 'fast_settlement', 'xERC20_standard'], settlementTime: '30min' },
+      { chain: 8453, tokenOnChain: 'xpufETH', bridgeProvider: 'EVERCLEAR', features: ['puffer_native', 'fast_settlement', 'xERC20_standard'], settlementTime: '30min' },
+      { chain: 42161, tokenOnChain: 'xpufETH', bridgeProvider: 'EVERCLEAR', features: ['puffer_native', 'fast_settlement', 'xERC20_standard'], settlementTime: '30min' },
+      { chain: 137, tokenOnChain: 'xpufETH', bridgeProvider: 'EVERCLEAR', features: ['puffer_native', 'fast_settlement', 'xERC20_standard'], settlementTime: '30min' },
+      { chain: 43114, tokenOnChain: 'xpufETH', bridgeProvider: 'EVERCLEAR', features: ['puffer_native', 'fast_settlement', 'xERC20_standard'], settlementTime: '30min' },
+      { chain: 56, tokenOnChain: 'xpufETH', bridgeProvider: 'EVERCLEAR', features: ['puffer_native', 'fast_settlement', 'xERC20_standard'], settlementTime: '30min' },
+      { chain: 10, tokenOnChain: 'xpufETH', bridgeProvider: 'EVERCLEAR', features: ['puffer_native', 'fast_settlement', 'xERC20_standard'], settlementTime: '30min' },
+      { chain: 324, tokenOnChain: 'xpufETH', bridgeProvider: 'EVERCLEAR', features: ['puffer_native', 'fast_settlement', 'xERC20_standard'], settlementTime: '30min' }
     ]
   }
 };
@@ -427,8 +416,8 @@ class PufferFinanceMCPServer {
           },
         },
         {
-          name: "create_stargate_swap",
-          description: "Create a Stargate Finance bridge swap with unified liquidity and fast transfers",
+          name: "puffer_bridge",
+          description: "Execute pufETH/xpufETH bridge through Puffer Finance's native bridge using Everclear/Chainlink CCIP",
           inputSchema: {
             type: "object",
             properties: {
@@ -442,7 +431,7 @@ class PufferFinanceMCPServer {
               },
               token: {
                 type: "string",
-                description: "Token to bridge (e.g., 'pufETH', 'xpufETH', 'ETH', 'USDC')",
+                description: "Token to bridge ('pufETH' or 'xpufETH')",
               },
               amount: {
                 type: "string",
@@ -452,10 +441,10 @@ class PufferFinanceMCPServer {
                 type: "string",
                 description: "Recipient wallet address",
               },
-              testnet: {
-                type: "boolean",
-                description: "Use testnet API (default: false)",
-                default: false,
+              provider: {
+                type: "string",
+                description: "Bridge provider preference ('EVERCLEAR' or 'CHAINLINK_CCIP')",
+                default: "EVERCLEAR",
               },
             },
             required: ["fromChain", "toChain", "token", "amount", "recipientAddress"],
@@ -484,8 +473,8 @@ class PufferFinanceMCPServer {
           return await this.executeBridge(args);
         case "create_everclear_intent":
           return await this.createEverclearIntentTool(args);
-        case "create_stargate_swap":
-          return await this.createStargateSwapTool(args);
+        case "puffer_bridge":
+          return await this.pufferBridgeTool(args);
         default:
           throw new Error(`Unknown tool: ${name}`);
       }
@@ -2264,8 +2253,8 @@ class PufferFinanceMCPServer {
     }
   }
 
-  async createStargateSwapTool(args) {
-    const { fromChain, toChain, token, amount, recipientAddress, testnet = false } = args;
+  async pufferBridgeTool(args) {
+    const { fromChain, toChain, token, amount, recipientAddress, provider = 'EVERCLEAR' } = args;
     
     try {
       const fromChainId = CHAIN_IDS[fromChain];
@@ -2275,59 +2264,64 @@ class PufferFinanceMCPServer {
         throw new Error(`Invalid chain names: ${fromChain} -> ${toChain}`);
       }
 
-      // Validate bridge route for Stargate
-      const validation = this.validateStargateParams(fromChain, toChain, token, {});
+      // Validate Puffer bridge route
+      const validation = this.validatePufferBridgeParams(fromChain, toChain, token, provider);
       if (!validation.isValid) {
-        throw new Error(`Invalid Stargate parameters: ${validation.errors.join(', ')}`);
+        throw new Error(`Invalid Puffer bridge parameters: ${validation.errors.join(', ')}`);
       }
 
-      console.log(`Creating Stargate swap: ${fromChain} -> ${toChain}, ${amount} ${token}`);
+      console.log(`Creating Puffer Finance bridge: ${fromChain} -> ${toChain}, ${amount} ${token} via ${provider}`);
 
-      // Get quote first
-      const quote = await this.getStargateQuote(fromChainId, toChainId, token, amount, testnet);
+      // Get bridge quote from Puffer's API
+      const quote = await this.getPufferBridgeQuote(fromChainId, toChainId, token, amount, provider);
       
-      // Create swap
-      const swap = await this.createStargateSwap(fromChainId, toChainId, token, amount, recipientAddress, testnet);
+      // Create bridge transaction
+      const bridge = await this.createPufferBridge(fromChainId, toChainId, token, amount, recipientAddress, provider);
 
       return {
         content: [
           {
             type: "text",
             text: JSON.stringify({
-              stargateSwap: {
+              pufferBridge: {
                 fromChain,
                 toChain,
                 token,
                 amount,
                 recipientAddress,
+                provider,
                 quote: quote.success ? {
                   fee: quote.fee,
                   estimatedTime: quote.estimatedTime,
-                  route: quote.route,
-                  gasEstimate: quote.gasEstimate
+                  settlementTime: quote.settlementTime,
+                  exchangeRate: quote.exchangeRate
                 } : quote.fallback,
-                swap: swap.success ? {
-                  swapId: swap.swapId,
-                  contractAddress: swap.contractAddress,
-                  transactionData: swap.transactionData,
-                  calldata: swap.calldata,
-                  value: swap.value,
-                  gasLimit: swap.gasLimit
-                } : swap.fallback,
+                bridge: bridge.success ? {
+                  bridgeId: bridge.bridgeId,
+                  contractAddress: bridge.contractAddress,
+                  transactionData: bridge.transactionData,
+                  calldata: bridge.calldata,
+                  value: bridge.value,
+                  gasLimit: bridge.gasLimit
+                } : bridge.fallback,
                 instructions: [
-                  "1. 🌟 Stargate swap created with unified liquidity",
-                  `2. Approve ${token} for Stargate Router: ${swap.contractAddress || '0x8731d54E9D02c286767d56ac03e8037C07e01e98'}`,
-                  "3. Execute swap transaction with provided calldata",
-                  `4. Monitor swap progress via ID: ${swap.swapId || 'UNKNOWN'}`,
-                  `5. Receive tokens on ${toChain} (${quote.estimatedTime || '1-3 minutes'})`
+                  "1. 🔥 Puffer Finance native bridge created",
+                  `2. Approve ${token} for bridge contract: ${bridge.contractAddress || 'PUFFER_BRIDGE_CONTRACT'}`,
+                  "3. Execute bridge transaction with provided calldata",
+                  `4. Monitor bridge progress via Puffer app`,
+                  `5. Receive ${token === 'pufETH' ? 'xpufETH' : 'pufETH'} on ${toChain} (${quote.settlementTime || '30 minutes'})`
                 ],
                 apiStatus: {
-                  quote: quote.success ? "✅ Live Stargate data" : "⚠️ Fallback data",
-                  swap: swap.success ? "✅ Swap created" : "❌ Swap failed"
+                  quote: quote.success ? "✅ Live Puffer data" : "⚠️ Fallback data",
+                  bridge: bridge.success ? "✅ Bridge created" : "❌ Bridge failed"
                 },
-                provider: "STARGATE Finance",
-                features: ["Unified Liquidity", "Fast Transfers", "Low Slippage"],
-                testnet: testnet ? "Using Stargate testnet" : "Using Stargate mainnet"
+                bridgeProvider: provider,
+                features: provider === 'EVERCLEAR' ? 
+                  ["Puffer Native", "Fast Settlement", "xERC20 Standard", "30min Settlement"] :
+                  ["Enterprise Security", "Chainlink CCIP", "Verifiable", "5-15min Settlement"],
+                tokenMapping: token === 'pufETH' ? 
+                  `${token} (${fromChain}) → xpufETH (${toChain})` :
+                  `${token} (${fromChain}) → pufETH (${toChain})`
               }
             }, null, 2)
           }
@@ -2340,12 +2334,13 @@ class PufferFinanceMCPServer {
           {
             type: "text",
             text: JSON.stringify({
-              error: `Failed to create Stargate swap: ${error.message}`,
+              error: `Failed to create Puffer bridge: ${error.message}`,
               fallback: {
-                message: "Use execute_bridge tool for alternative bridge options",
-                supportedChains: ["Ethereum", "Base", "Arbitrum", "Polygon", "Avalanche", "BSC"],
-                supportedTokens: ["pufETH", "xpufETH", "ETH", "USDC", "USDT"],
-                alternativeProviders: ["EVERCLEAR", "CHAINLINK CCIP"]
+                message: "Use create_everclear_intent for direct Everclear integration",
+                supportedChains: ["Ethereum", "Base", "Arbitrum", "Polygon", "Optimism", "Avalanche", "BSC", "zkSync Era"],
+                supportedTokens: ["pufETH", "xpufETH"],
+                providers: ["EVERCLEAR (Primary)", "CHAINLINK_CCIP (Soneium, Berachain)"],
+                bridgeVolume: "$17.5M bridged via Puffer-Everclear partnership"
               }
             }, null, 2)
           }
@@ -2354,22 +2349,32 @@ class PufferFinanceMCPServer {
     }
   }
 
-  validateStargateParams(fromChain, toChain, token, options) {
+  validatePufferBridgeParams(fromChain, toChain, token, provider) {
     const errors = [];
     
-    // Check if chains are supported by Stargate
-    const stargateChains = ["Ethereum", "Base", "Arbitrum", "Polygon", "Avalanche", "BSC"];
-    if (!stargateChains.includes(fromChain)) {
-      errors.push(`${fromChain} not supported by Stargate`);
-    }
-    if (!stargateChains.includes(toChain)) {
-      errors.push(`${toChain} not supported by Stargate`);
+    // Check if token is supported by Puffer
+    const pufferTokens = ["pufETH", "xpufETH"];
+    if (!pufferTokens.includes(token)) {
+      errors.push(`${token} not supported by Puffer bridge`);
     }
     
-    // Check token support
-    const stargateTokens = ["pufETH", "xpufETH", "ETH", "WETH", "USDC", "USDT"];
-    if (!stargateTokens.includes(token)) {
-      errors.push(`${token} not supported by Stargate`);
+    // Check chain support based on provider
+    if (provider === 'EVERCLEAR') {
+      const everclearChains = ["Ethereum", "Base", "Arbitrum", "Polygon", "Optimism", "Avalanche", "BSC", "zkSync Era"];
+      if (!everclearChains.includes(fromChain)) {
+        errors.push(`${fromChain} not supported by Everclear`);
+      }
+      if (!everclearChains.includes(toChain)) {
+        errors.push(`${toChain} not supported by Everclear`);
+      }
+    } else if (provider === 'CHAINLINK_CCIP') {
+      const ccipChains = ["Ethereum", "Soneium", "Berachain"];
+      if (!ccipChains.includes(fromChain)) {
+        errors.push(`${fromChain} not supported by Chainlink CCIP`);
+      }
+      if (!ccipChains.includes(toChain)) {
+        errors.push(`${toChain} not supported by Chainlink CCIP`);
+      }
     }
     
     return {
@@ -2514,24 +2519,21 @@ class PufferFinanceMCPServer {
     return tokenMapping[token] || token;
   }
 
-  // Stargate Finance API integration methods
-  async getStargateQuote(fromChainId, toChainId, token, amount, testnet = false) {
+  // Puffer Finance bridge API integration methods
+  async getPufferBridgeQuote(fromChainId, toChainId, token, amount, provider) {
     try {
-      const baseUrl = testnet ? STARGATE_TESTNET_API_BASE : STARGATE_API_BASE;
-      
-      // Convert token names to Stargate format
-      const stargateToken = this.mapTokenToStargate(token);
-      
-      const response = await axios.get(`${baseUrl}/v1/quote`, {
+      // Try to connect to Puffer Finance bridge API
+      const response = await axios.get(`${PUFFER_API_BASE}/bridge/quote`, {
         params: {
-          srcChainId: fromChainId.toString(),
-          dstChainId: toChainId.toString(),
-          srcPoolId: this.getStargatePoolId(fromChainId, stargateToken),
-          dstPoolId: this.getStargatePoolId(toChainId, stargateToken),
-          amount: amount
+          fromChain: fromChainId.toString(),
+          toChain: toChainId.toString(),
+          token: token,
+          amount: amount,
+          provider: provider
         },
         headers: {
-          'Accept': 'application/json'
+          'Accept': 'application/json',
+          'User-Agent': 'PufferMCP/1.0'
         },
         timeout: 10000
       });
@@ -2539,122 +2541,83 @@ class PufferFinanceMCPServer {
       return {
         success: true,
         data: response.data,
-        fee: response.data.eqFee || '0',
-        estimatedTime: '1-3 minutes',
-        route: 'STARGATE',
-        gasEstimate: response.data.eqReward || '0'
+        fee: response.data.fee || '0.001 ETH',
+        estimatedTime: response.data.estimatedTime || '30 minutes',
+        settlementTime: provider === 'EVERCLEAR' ? '30 minutes' : '5-15 minutes',
+        exchangeRate: response.data.exchangeRate || '1:1'
       };
     } catch (error) {
-      console.error('Stargate API error:', error.message);
+      console.error('Puffer bridge API error:', error.message);
       return {
         success: false,
         error: error.message,
         fallback: {
-          fee: '0.0005 ETH',
-          estimatedTime: '2-5 minutes',
-          route: 'STARGATE_FALLBACK',
-          gasEstimate: '150000'
+          fee: provider === 'EVERCLEAR' ? '0.001 ETH' : '0.005 ETH',
+          estimatedTime: provider === 'EVERCLEAR' ? '30 minutes' : '5-15 minutes',
+          settlementTime: provider === 'EVERCLEAR' ? '30 minutes' : '5-15 minutes',
+          exchangeRate: '1:1',
+          route: `PUFFER_${provider}_FALLBACK`
         }
       };
     }
   }
 
-  async createStargateSwap(fromChainId, toChainId, token, amount, recipientAddress, testnet = false) {
+  async createPufferBridge(fromChainId, toChainId, token, amount, recipientAddress, provider) {
     try {
-      const baseUrl = testnet ? STARGATE_TESTNET_API_BASE : STARGATE_API_BASE;
-      
-      const stargateToken = this.mapTokenToStargate(token);
-      
-      const response = await axios.post(`${baseUrl}/v1/swap`, {
-        srcChainId: fromChainId.toString(),
-        dstChainId: toChainId.toString(),
-        srcPoolId: this.getStargatePoolId(fromChainId, stargateToken),
-        dstPoolId: this.getStargatePoolId(toChainId, stargateToken),
+      // Try to connect to Puffer Finance bridge creation API
+      const response = await axios.post(`${PUFFER_API_BASE}/bridge/create`, {
+        fromChain: fromChainId.toString(),
+        toChain: toChainId.toString(),
+        token: token,
         amount: amount,
         to: recipientAddress,
-        slippageBps: 100 // 1% slippage
+        provider: provider
       }, {
         headers: {
           'Content-Type': 'application/json',
-          'Accept': 'application/json'
+          'Accept': 'application/json',
+          'User-Agent': 'PufferMCP/1.0'
         },
-        timeout: 10000
+        timeout: 15000
       });
 
       return {
         success: true,
-        swapId: response.data.swapId || `stargate_${Date.now()}`,
-        contractAddress: response.data.router || "0x8731d54E9D02c286767d56ac03e8037C07e01e98", // Stargate Router
-        transactionData: response.data.txData || `swap(${fromChainId},${toChainId},${amount})`,
+        bridgeId: response.data.bridgeId || `puffer_${provider.toLowerCase()}_${Date.now()}`,
+        contractAddress: response.data.contractAddress || this.getPufferBridgeContract(fromChainId, provider),
+        transactionData: response.data.txData || `bridge(${token}, ${amount}, ${toChainId})`,
         calldata: response.data.calldata || "0x",
         value: response.data.value || "0",
-        gasLimit: response.data.gasLimit || "200000"
+        gasLimit: response.data.gasLimit || "300000"
       };
     } catch (error) {
-      console.error('Stargate swap creation error:', error.message);
+      console.error('Puffer bridge creation error:', error.message);
       return {
         success: false,
         error: error.message,
         fallback: {
-          swapId: `stargate_fallback_${Date.now()}`,
-          contractAddress: "0x8731d54E9D02c286767d56ac03e8037C07e01e98",
-          transactionData: `bridge(${token}, ${amount}, ${toChainId})`,
-          gasLimit: "200000"
+          bridgeId: `puffer_${provider.toLowerCase()}_fallback_${Date.now()}`,
+          contractAddress: this.getPufferBridgeContract(fromChainId, provider),
+          transactionData: `bridge(${token}, ${amount}, ${toChainId}, ${recipientAddress})`,
+          gasLimit: "300000",
+          note: "Use app.puffer.fi for manual bridge execution"
         }
       };
     }
   }
 
-  mapTokenToStargate(token) {
-    // Map Puffer tokens to Stargate pool format
-    const tokenMapping = {
-      'pufETH': 'ETH', // pufETH bridges as ETH on Stargate
-      'xpufETH': 'ETH', // xpufETH bridges as ETH on Stargate
-      'ETH': 'ETH',
-      'WETH': 'ETH',
-      'USDC': 'USDC',
-      'USDT': 'USDT'
-    };
+  getPufferBridgeContract(chainId, provider) {
+    // Return appropriate Puffer bridge contract based on chain and provider
+    const contracts = PUFFER_CONTRACTS[chainId];
+    if (!contracts) return "0x0000000000000000000000000000000000000000";
     
-    return tokenMapping[token] || 'ETH';
-  }
-
-  getStargatePoolId(chainId, token) {
-    // Stargate pool IDs by chain and token
-    const poolIds = {
-      1: { // Ethereum
-        'ETH': 13,
-        'USDC': 1,
-        'USDT': 2
-      },
-      56: { // BSC
-        'ETH': 13,
-        'USDC': 1,
-        'USDT': 2
-      },
-      43114: { // Avalanche
-        'ETH': 13,
-        'USDC': 1,
-        'USDT': 2
-      },
-      137: { // Polygon
-        'ETH': 13,
-        'USDC': 1,
-        'USDT': 2
-      },
-      42161: { // Arbitrum
-        'ETH': 13,
-        'USDC': 1,
-        'USDT': 2
-      },
-      8453: { // Base
-        'ETH': 13,
-        'USDC': 1,
-        'USDT': 2
-      }
-    };
-
-    return poolIds[chainId]?.[token] || 13; // Default to ETH pool
+    if (provider === 'EVERCLEAR') {
+      return contracts.PufferL2Depositor || contracts.PufferDepositor || "0x3436E0B85cd929929F5802e792CFE282166E0259";
+    } else if (provider === 'CHAINLINK_CCIP') {
+      return contracts.PufferDepositor || "0x4aa799c5dfc01ee7d790e3bf1a7c2257ce1dceff";
+    }
+    
+    return contracts.PufferVault || "0xD9A442856C234a39a81a089C06451EBAa4306a72";
   }
 
   async run() {

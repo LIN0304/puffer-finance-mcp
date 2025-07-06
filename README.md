@@ -5,13 +5,13 @@ Complete MCP server for Puffer Finance with **DeFi strategies**, **cross-chain b
 ## ✨ Features
 
 ### 🌉 **Cross-Chain Bridge Operations**
-- **10 Supported Networks**: Ethereum, Base, Arbitrum, Polygon, Avalanche, BSC, Apechain, BNB Chain, Berachain, Soneium, Zircuit
-- **Bridge Provider Integration**: STARGATE + EVERCLEAR + CHAINLINK CCIP
-- **Live Stargate API**: Unified liquidity and fast transfers via api.stargate.finance
+- **8+ Supported Networks**: Ethereum, Base, Arbitrum, Polygon, Optimism, Avalanche, BSC, zkSync Era, Soneium, Berachain
+- **Bridge Provider Integration**: Puffer Finance native bridge using EVERCLEAR + CHAINLINK CCIP
+- **Live Puffer API**: Direct connection to app.puffer.fi bridge endpoints
 - **Live Everclear API**: Real-time quotes, intents, and limits from api.everclear.org
 - **Real Contract Addresses**: All verified Puffer Finance contracts
-- **Token Mapping**: Automatic pufETH ↔ xpufETH conversion
-- **Provider-Specific Instructions**: Optimized routes and fees
+- **Token Mapping**: Automatic pufETH ↔ xpufETH conversion with xERC20 standard
+- **$17.5M Bridge Volume**: Proven Puffer-Everclear partnership with 30min settlement
 
 ### 📊 **DeFi Strategy Management**  
 - **30+ DeFi Strategies**: Complete Puffer Finance ecosystem
@@ -78,13 +78,13 @@ Direct Everclear API integration for real-time bridge execution
 - **Transaction Ready**: Returns contract addresses and execution data
 - **Fallback Support**: Graceful degradation if API unavailable
 
-### 2c. **`create_stargate_swap`** 🌟 **STARGATE FINANCE**
-Direct Stargate Finance API integration for unified liquidity bridging
-- **Unified Liquidity**: Access to Stargate's unified liquidity pools
-- **Fast Transfers**: 1-3 minute cross-chain transfers
-- **Live API Data**: Real-time quotes and swap data from api.stargate.finance
-- **Low Slippage**: Optimized for minimal slippage across chains
-- **6 Major Networks**: Ethereum, Base, Arbitrum, Polygon, Avalanche, BSC
+### 2c. **`puffer_bridge`** 🔥 **PUFFER FINANCE NATIVE**
+Direct Puffer Finance bridge integration using their actual bridge providers
+- **Native Integration**: Connects to Puffer's actual bridge API at app.puffer.fi
+- **Everclear Partnership**: $17.5M bridged via Puffer-Everclear collaboration
+- **Fast Settlement**: 30-minute settlement time (down from 2 hours)
+- **xERC20 Standard**: Bridge-agnostic standard for maximum security
+- **8+ Networks**: Ethereum, Base, Arbitrum, Polygon, Optimism, Avalanche, BSC, zkSync Era
 
 ### 4. **`get_defi_strategies`**
 Scrape all DeFi opportunities from Puffer Finance
@@ -180,32 +180,29 @@ simulate_deposit({
 })
 ```
 
-## 🔧 Bridge Providers
+## 🔧 Puffer Finance Bridge Providers
 
-### **STARGATE FINANCE** ⭐ **PRIMARY PROVIDER**
-- **Chains**: Ethereum, Base, Arbitrum, Polygon, Avalanche, BSC
-- **Token**: pufETH/xpufETH (unified liquidity)
-- **Features**: Unified liquidity pools, 1-3 min transfers, low slippage
-- **Router**: 0x8731d54E9D02c286767d56ac03e8037C07e01e98
+### **EVERCLEAR** ⭐ **PRIMARY PROVIDER**
+- **Chains**: Ethereum, Base, Arbitrum, Polygon, Optimism, Avalanche, BSC, zkSync Era
+- **Token**: pufETH ↔ xpufETH (xERC20 standard)
+- **Features**: Puffer native integration, 30min settlement, $17.5M volume
+- **Partnership**: Official Puffer-Everclear collaboration
 
-### **EVERCLEAR** 
-- **Chains**: Base, BNB Chain, Apechain, Zircuit
-- **Token**: xpufETH (cross-chain representation)
-- **Features**: Intent-based bridging, lower fees (~$1-8), 1-10 min transfers
-
-### **CHAINLINK CCIP**
-- **Chains**: Arbitrum, Soneium, Berachain  
+### **CHAINLINK CCIP** 🔒 **ENTERPRISE GRADE**
+- **Chains**: Ethereum, Soneium, Berachain  
 - **Token**: pufETH (native token)
-- **Features**: Enterprise security, reliable transfers (5-15 min)
+- **Features**: Enterprise security, verifiable cross-chain, 5-15 min transfers
+- **Use Cases**: High-value transfers, enterprise applications
 
 ## 🏗️ Architecture
 
 - **Real Contract Integration**: All addresses verified from Puffer Finance
-- **Triple Provider Support**: STARGATE + EVERCLEAR + CHAINLINK bridge routing
-- **Token Intelligence**: Automatic pufETH/xpufETH mapping
+- **Native Bridge Support**: Direct integration with Puffer's bridge providers
+- **Token Intelligence**: Automatic pufETH/xpufETH mapping with xERC20 standard
 - **Error Handling**: Comprehensive validation and safety checks
 - **Live Data**: Real-time scraping from app.puffer.fi
-- **API Integration**: Direct connection to Stargate and Everclear APIs
+- **API Integration**: Direct connection to Puffer Finance and Everclear APIs
+- **Partnership Proven**: $17.5M in bridge volume via Puffer-Everclear collaboration
 
 ## 📄 License
 
